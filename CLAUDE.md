@@ -37,7 +37,7 @@ claudecode.nvim - A Neovim plugin that implements the same WebSocket-based MCP p
 
 1. **WebSocket Server** (`lua/claudecode/server/`) - Pure Neovim implementation using vim.loop, RFC 6455 compliant
 2. **MCP Tool System** (`lua/claudecode/tools/`) - Implements tools that Claude can execute (openFile, getCurrentSelection, etc.)
-3. **Lock File System** (`lua/claudecode/lockfile.lua`) - Creates discovery files for Claude CLI at `~/.claude/ide/`
+3. **Lock File System** (`lua/claudecode/lockfile.lua`) - Creates discovery files for Claude CLI at `~/.claude/ide/` (or `$CLAUDE_CONFIG_DIR/ide/` if set)
 4. **Selection Tracking** (`lua/claudecode/selection.lua`) - Monitors text selections and sends updates to Claude
 5. **Diff Integration** (`lua/claudecode/diff.lua`) - Native Neovim diff support for Claude's file comparisons
 6. **Terminal Integration** (`lua/claudecode/terminal.lua`) - Manages Claude CLI terminal sessions
@@ -80,7 +80,7 @@ Test files follow the pattern `*_spec.lua` or `*_test.lua` and use the busted fr
 
 - Plugin requires Neovim >= 0.8.0
 - Uses only Neovim built-ins for WebSocket implementation (vim.loop, vim.json, vim.schedule)
-- Lock files are created at `~/.claude/ide/[port].lock` for Claude CLI discovery
+- Lock files are created at `~/.claude/ide/[port].lock` (or `$CLAUDE_CONFIG_DIR/ide/[port].lock` if `CLAUDE_CONFIG_DIR` is set) for Claude CLI discovery
 - WebSocket server only accepts local connections for security
 - Selection tracking is debounced to reduce overhead
 - Terminal integration supports both snacks.nvim and native Neovim terminal
@@ -137,3 +137,9 @@ rg "0\.1\.0" .  # Should only show CHANGELOG.md historical entries
 ## CRITICAL: Pre-commit Requirements
 
 **ALWAYS run `make` before committing any changes.** This runs code quality checks and formatting that must pass for CI to succeed. Never skip this step - many PRs fail CI because contributors don't run the build commands before committing.
+
+## Configuration
+
+### Environment Variables
+
+- `CLAUDE_CONFIG_DIR` - If set, the plugin will use `$CLAUDE_CONFIG_DIR/ide/` instead of `~/.claude/ide/` for lock file storage. This allows users to customize the Claude configuration directory location.

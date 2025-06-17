@@ -3,7 +3,11 @@
 # This library provides reusable functions for interacting with Claude Code's WebSocket API
 
 # Configuration
-export CLAUDE_LOCKFILE_DIR="$HOME/.claude/ide"
+if [ -n "$CLAUDE_CONFIG_DIR" ]; then
+  export CLAUDE_LOCKFILE_DIR="$CLAUDE_CONFIG_DIR/ide"
+else
+  export CLAUDE_LOCKFILE_DIR="$HOME/.claude/ide"
+fi
 export CLAUDE_LOG_DIR="mcp_test_logs" # Default log directory
 export CLAUDE_WS_TIMEOUT=10           # Default timeout in seconds
 
@@ -13,7 +17,7 @@ export CLAUDE_WS_TIMEOUT=10           # Default timeout in seconds
 # Find the Claude lockfile and extract the port
 find_claude_lockfile() {
   # Get all .lock files
-  lock_files=$(find ~/.claude/ide -name "*.lock" 2>/dev/null || echo "")
+  lock_files=$(find "$CLAUDE_LOCKFILE_DIR" -name "*.lock" 2>/dev/null || echo "")
 
   if [ -z "$lock_files" ]; then
     echo "No Claude lockfiles found. Is the VSCode extension running?" >&2
