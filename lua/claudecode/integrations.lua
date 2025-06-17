@@ -17,6 +17,8 @@ function M.get_selected_files_from_tree()
     return M._get_oil_selection()
   elseif current_ft == "minifiles" then
     return M._get_mini_files_selection()
+  elseif current_ft == "snacks_picker_list" then
+    return M._get_snacks_explorer_selection()
   else
     return nil, "Not in a supported tree buffer (current filetype: " .. current_ft .. ")"
   end
@@ -334,6 +336,109 @@ function M._get_mini_files_selection()
   end
 
   return {}, "No file found under cursor"
+--- Get selected files from snacks.nvim explorer
+--- Supports both multi-selection and single file under cursor
+--- @return table files List of file paths
+--- @return string|nil error Error message if operation failed
+function M._get_snacks_explorer_selection()
+  local success, snacks = pcall(require, "snacks")
+  if not success or not snacks.picker then
+    return {}, "snacks.nvim picker not available"
+  end
+
+  -- Get active pickers
+  local active_pickers = snacks.picker.get and snacks.picker.get()
+  if not active_pickers or #active_pickers == 0 then
+    return {}, "No active snacks picker found"
+  end
+
+  -- Use the most recent picker
+  local current_picker = active_pickers[#active_pickers]
+  -- if not current_picker or not current_picker.is_active or not current_picker:is_active() then
+  --   return {}, "Snacks picker not active"
+  -- end
+
+  local files = {}
+
+  -- Try to get selected items first (with fallback to current)
+  local selected_items = current_picker.selected and current_picker:selected({ fallback = true })
+  if selected_items and #selected_items > 0 then
+    for _, item in ipairs(selected_items) do
+      if M._is_valid_snacks_file_item(item) then
+        local file_path = M._extract_snacks_file_path(item)
+        if file_path then
+          table.insert(files, file_path)
+        end
+      end
+    end
+
+    if #files > 0 then
+      return files, nil
+    end
+  end
+
+  -- Fallback to current item
+  local current_item = current_picker.current and current_picker:current()
+  if current_item and M._is_valid_snacks_file_item(current_item) then
+    local file_path = M._extract_snacks_file_path(current_item)
+    if file_path then
+      return { file_path }, nil
+    end
+  end
+
+  return {}, "No file found under cursor"
+end
+
+--- Check if snacks item is a valid file item
+--- @param item table The snacks picker item
+--- @return boolean true if valid file item
+function M._is_valid_snacks_file_item(item)
+  if not item then
+    return false
+  end
+
+  -- Check for file path in the item
+  if item.file then
+    if type(item.file) == "string" and item.file ~= "" then
+      -- Security check: exclude root-level files
+      if not string.match(item.file, "^/[^/]*$") then
+        return true
+      end
+    end
+  end
+
+  -- Alternative path formats that snacks might use
+  if item.path then
+    if type(item.path) == "string" and item.path ~= "" then
+      if not string.match(item.path, "^/[^/]*$") then
+        return true
+      end
+    end
+  end
+
+  return false
+end
+
+--- Extract file path from snacks item
+--- @param item table The snacks picker item
+--- @return string|nil file_path Normalized file path or nil
+function M._extract_snacks_file_path(item)
+  if not item then
+    return nil
+  end
+
+  local file_path = item.file or item.path
+  if not file_path or file_path == "" then
+    return nil
+  end
+
+  -- Convert relative paths to absolute if needed
+  if not vim.startswith(file_path, "/") then
+    local cwd = item.cwd or vim.fn.getcwd()
+    file_path = vim.fs.normalize(cwd .. "/" .. file_path)
+  end
+
+  return file_path
 end
 
 return M
