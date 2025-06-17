@@ -7,7 +7,17 @@
 local M = {}
 
 --- Path to the lock file directory
-M.lock_dir = vim.fn.expand("~/.claude/ide")
+---@return string lock_dir The path to the lock file directory
+local function get_lock_dir()
+  local claude_config_dir = os.getenv("CLAUDE_CONFIG_DIR")
+  if claude_config_dir and claude_config_dir ~= "" then
+    return vim.fn.expand(claude_config_dir .. "/ide")
+  else
+    return vim.fn.expand("~/.claude/ide")
+  end
+end
+
+M.lock_dir = get_lock_dir()
 
 -- Track if random seed has been initialized
 local random_initialized = false

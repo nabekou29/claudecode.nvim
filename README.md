@@ -112,7 +112,7 @@ This plugin creates a WebSocket server that Claude Code CLI connects to, impleme
 The protocol uses a WebSocket-based variant of MCP (Model Context Protocol) that:
 
 1. Creates a WebSocket server on a random port
-2. Writes a lock file to `~/.claude/ide/[port].lock` with connection info
+2. Writes a lock file to `~/.claude/ide/[port].lock` (or `$CLAUDE_CONFIG_DIR/ide/[port].lock` if `CLAUDE_CONFIG_DIR` is set) with connection info
 3. Sets environment variables that tell Claude where to connect
 4. Implements MCP tools that Claude can call
 
@@ -176,7 +176,7 @@ For deep technical details, see [ARCHITECTURE.md](./ARCHITECTURE.md).
 
 ## Troubleshooting
 
-- **Claude not connecting?** Check `:ClaudeCodeStatus` and verify lock file exists in `~/.claude/ide/`
+- **Claude not connecting?** Check `:ClaudeCodeStatus` and verify lock file exists in `~/.claude/ide/` (or `$CLAUDE_CONFIG_DIR/ide/` if `CLAUDE_CONFIG_DIR` is set)
 - **Need debug logs?** Set `log_level = "debug"` in opts
 - **Terminal issues?** Try `provider = "native"` if using snacks.nvim
 
