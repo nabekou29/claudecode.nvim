@@ -226,6 +226,13 @@ end
 -- @param opts_override table (optional) Overrides for terminal appearance (split_side, split_width_percentage).
 -- @param cmd_args string|nil (optional) Arguments to append to the claude command.
 function M.open(opts_override, cmd_args)
+  if not config.enabled then
+    -- Only warn if no WebSocket connection exists
+    if not claudecode_server_module.state.server then
+      vim.notify("Claude Code terminal is disabled in configuration", vim.log.levels.WARN)
+    end
+    return
+  end
   local effective_config = build_config(opts_override)
   local cmd_string, claude_env_table = get_claude_command_and_env(cmd_args)
 
@@ -234,6 +241,9 @@ end
 
 --- Closes the managed Claude terminal if it's open and valid.
 function M.close()
+  if not config.enabled then
+    return
+  end
   get_provider().close()
 end
 
@@ -241,6 +251,13 @@ end
 -- @param opts_override table (optional) Overrides for terminal appearance (split_side, split_width_percentage).
 -- @param cmd_args string|nil (optional) Arguments to append to the claude command.
 function M.simple_toggle(opts_override, cmd_args)
+  if not config.enabled then
+    -- Only warn if no WebSocket connection exists
+    if not claudecode_server_module.state.server then
+      vim.notify("Claude Code terminal is disabled in configuration", vim.log.levels.WARN)
+    end
+    return
+  end
   local effective_config = build_config(opts_override)
   local cmd_string, claude_env_table = get_claude_command_and_env(cmd_args)
 
@@ -251,6 +268,13 @@ end
 -- @param opts_override table (optional) Overrides for terminal appearance (split_side, split_width_percentage).
 -- @param cmd_args string|nil (optional) Arguments to append to the claude command.
 function M.focus_toggle(opts_override, cmd_args)
+  if not config.enabled then
+    -- Only warn if no WebSocket connection exists
+    if not claudecode_server_module.state.server then
+      vim.notify("Claude Code terminal is disabled in configuration", vim.log.levels.WARN)
+    end
+    return
+  end
   local effective_config = build_config(opts_override)
   local cmd_string, claude_env_table = get_claude_command_and_env(cmd_args)
 
@@ -283,6 +307,9 @@ end
 -- This checks both Snacks and native fallback terminals.
 -- @return number|nil The buffer number if an active terminal is found, otherwise nil.
 function M.get_active_terminal_bufnr()
+  if not config.enabled then
+    return nil
+  end
   return get_provider().get_active_bufnr()
 end
 

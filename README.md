@@ -153,6 +153,7 @@ For deep technical details, see [ARCHITECTURE.md](./ARCHITECTURE.md).
 
     -- Terminal Configuration
     terminal = {
+      enabled = true,
       split_side = "right", -- "left" or "right"
       split_width_percentage = 0.30,
       provider = "auto", -- "auto", "snacks", or "native"
