@@ -143,3 +143,10 @@ rg "0\.1\.0" .  # Should only show CHANGELOG.md historical entries
 ### Environment Variables
 
 - `CLAUDE_CONFIG_DIR` - If set, the plugin will use `$CLAUDE_CONFIG_DIR/ide/` instead of `~/.claude/ide/` for lock file storage. This allows users to customize the Claude configuration directory location.
+
+### Terminal Configuration
+
+- The `terminal.enabled` option (default: `true`) controls whether the plugin manages Claude Code terminal windows
+- When set to `false`, terminal-related commands (`ClaudeCode`, `ClaudeCodeFocus`, etc.) are not registered
+- This is useful for users who prefer to manage Claude Code in external terminals or GUI applications
+- Even with `terminal.enabled = false`, all other features (WebSocket server, file selection, diffs) work normally

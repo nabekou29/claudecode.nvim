@@ -285,6 +285,7 @@ For most users, the default configuration is sufficient:
   dependencies = {
     "folke/snacks.nvim", -- Optional for enhanced terminal
   },
+  config = true,
   keys = {
     { "<leader>a", nil, desc = "AI/Claude Code" },
     { "<leader>ac", "<cmd>ClaudeCode<cr>", desc = "Toggle Claude" },
@@ -320,6 +321,7 @@ For most users, the default configuration is sufficient:
 
     -- Terminal Configuration
     terminal = {
+      enabled = true,                           -- Enable terminal functionality
       split_side = "right",                     -- "left" or "right"
       split_width_percentage = 0.30,            -- Width as percentage (0.0 to 1.0)
       provider = "auto",                        -- "auto", "snacks", or "native"
@@ -362,6 +364,7 @@ For most users, the default configuration is sufficient:
 
 #### Terminal Configuration
 
+- **`enabled`**: Enable/disable terminal functionality (useful for GUI/external terminal users)
 - **`split_side`**: Which side to open the terminal split (`"left"` or `"right"`)
 - **`split_width_percentage`**: Terminal width as a fraction of screen width (0.1 = 10%, 0.5 = 50%)
 - **`provider`**: Terminal implementation to use:
