@@ -181,6 +181,14 @@ function M.process_mention_queue(from_new_connection)
     end
 
     local mention = mentions_to_send[index]
+    -- Ensure terminal is visible when processing queued mentions
+    local terminal = require("claudecode.terminal")
+    terminal.ensure_visible()
+    -- Ensure terminal is visible when processing queued mentions (if enabled)
+    if M.state.config.terminal.enabled then
+      local terminal = require("claudecode.terminal")
+      terminal.ensure_visible()
+    end
 
     -- Check if mention has expired (same timeout logic as old system)
     local current_time = vim.loop.now()
@@ -267,7 +275,7 @@ function M.send_at_mention(file_path, start_line, end_line, context)
   if M.is_claude_connected() then
     -- Claude is connected, send immediately and ensure terminal is visible
     local success, error_msg = M._broadcast_at_mention(file_path, start_line, end_line)
-    if success then
+    if success and M.state.config.terminal.enabled then
       local terminal = require("claudecode.terminal")
       if M.state.config and M.state.config.focus_after_send then
         -- Open focuses the terminal without toggling/hiding if already focused
@@ -281,9 +289,11 @@ function M.send_at_mention(file_path, start_line, end_line, context)
     -- Claude not connected, queue the mention and launch terminal
     queue_mention(file_path, start_line, end_line)
 
-    -- Launch terminal with Claude Code
-    local terminal = require("claudecode.terminal")
-    terminal.open()
+    -- Launch terminal with Claude Code (if enabled)
+    if M.state.config.terminal.enabled then
+      local terminal = require("claudecode.terminal")
+      terminal.open()
+    end
 
     logger.debug(context, "Queued @ mention and launched Claude Code: " .. file_path)
 
@@ -332,9 +342,28 @@ function M.setup(opts)
     if type(terminal_module.setup) == "function" then
       -- terminal_opts might be nil, which the setup function should handle gracefully.
       terminal_module.setup(opts.terminal, M.state.config.terminal_cmd, M.state.config.env)
+  -- Setup terminal module: always try to call setup to pass terminal_cmd,
+  -- even if terminal_opts (for split_side etc.) are not provided.
+  local terminal_setup_ok, terminal_module = pcall(require, "claudecode.terminal")
+  if terminal_setup_ok then
+    -- Guard in case tests or user replace the module with a minimal stub without `setup`.
+    if type(terminal_module.setup) == "function" then
+      -- terminal_opts might be nil, which the setup function should handle gracefully.
+      terminal_module.setup(terminal_opts, M.state.config.terminal_cmd)
+  -- Setup terminal module if enabled
+  if M.state.config.terminal.enabled then
+    local terminal_setup_ok, terminal_module = pcall(require, "claudecode.terminal")
+    if terminal_setup_ok then
+      -- Guard in case tests or user replace the module with a minimal stub without `setup`.
+      if type(terminal_module.setup) == "function" then
+        -- Pass terminal config directly since it's now in M.state.config.terminal
+        terminal_module.setup(M.state.config.terminal, M.state.config.terminal_cmd)
+      end
+    else
+      logger.error("init", "Failed to load claudecode.terminal module for setup.")
     end
   else
-    logger.error("init", "Failed to load claudecode.terminal module for setup.")
+    logger.debug("init", "Terminal functionality is disabled in config")
   end
 
   local diff = require("claudecode.diff")
@@ -670,6 +699,12 @@ function M._create_commands()
             vim.api.nvim_feedkeys(esc, "i", true)
           end
         end)
+        if M.state.config.terminal.enabled then
+          local terminal_ok, terminal = pcall(require, "claudecode.terminal")
+          if terminal_ok then
+            terminal.open({})
+          end
+        end
       end
     else
       logger.error("command", "ClaudeCodeSend: Failed to load selection module.")
@@ -738,6 +773,13 @@ function M._create_commands()
           local message = success_count == 1 and "Added 1 file to Claude context from visual selection"
             or string.format("Added %d files to Claude context from visual selection", success_count)
           logger.debug("command", message)
+
+          if M.state.config.terminal.enabled then
+            local terminal_ok, terminal = pcall(require, "claudecode.terminal")
+            if terminal_ok then
+              terminal.open({})
+            end
+          end
         end
         return
       end
@@ -745,16 +787,14 @@ function M._create_commands()
 
     -- Handle regular text selection using range from visual mode
     local selection_module_ok, selection_module = pcall(require, "claudecode.selection")
-    if not selection_module_ok then
-      return
-    end
-
-    -- Use the marks left by visual mode instead of trying to get current visual selection
-    local line1, line2 = vim.fn.line("'<"), vim.fn.line("'>")
-    if line1 and line2 and line1 > 0 and line2 > 0 then
-      selection_module.send_at_mention_for_visual_selection(line1, line2)
-    else
-      selection_module.send_at_mention_for_visual_selection()
+    if selection_module_ok then
+      local sent_successfully = selection_module.send_at_mention_for_visual_selection()
+      if sent_successfully and M.state.config.terminal.enabled then
+        local terminal_ok, terminal = pcall(require, "claudecode.terminal")
+        if terminal_ok then
+          terminal.open({})
+        end
+      end
     end
   end
 
@@ -949,50 +989,54 @@ function M._create_commands()
     desc = "Add specified file or directory to Claude Code context with optional line range",
   })
 
-  local terminal_ok, terminal = pcall(require, "claudecode.terminal")
-  if terminal_ok then
-    vim.api.nvim_create_user_command("ClaudeCode", function(opts)
-      local current_mode = vim.fn.mode()
-      if current_mode == "v" or current_mode == "V" or current_mode == "\22" then
-        vim.api.nvim_feedkeys(vim.api.nvim_replace_termcodes("<Esc>", true, false, true), "n", false)
-      end
-      local cmd_args = opts.args and opts.args ~= "" and opts.args or nil
-      terminal.simple_toggle({}, cmd_args)
-    end, {
-      nargs = "*",
-      desc = "Toggle the Claude Code terminal window (simple show/hide) with optional arguments",
-    })
+  if M.state.config.terminal.enabled then
+    local terminal_ok, terminal = pcall(require, "claudecode.terminal")
+    if terminal_ok then
+      vim.api.nvim_create_user_command("ClaudeCode", function(opts)
+        local current_mode = vim.fn.mode()
+        if current_mode == "v" or current_mode == "V" or current_mode == "\22" then
+          vim.api.nvim_feedkeys(vim.api.nvim_replace_termcodes("<Esc>", true, false, true), "n", false)
+        end
+        local cmd_args = opts.args and opts.args ~= "" and opts.args or nil
+        terminal.simple_toggle({}, cmd_args)
+      end, {
+        nargs = "*",
+        desc = "Toggle the Claude Code terminal window (simple show/hide) with optional arguments",
+      })
 
-    vim.api.nvim_create_user_command("ClaudeCodeFocus", function(opts)
-      local current_mode = vim.fn.mode()
-      if current_mode == "v" or current_mode == "V" or current_mode == "\22" then
-        vim.api.nvim_feedkeys(vim.api.nvim_replace_termcodes("<Esc>", true, false, true), "n", false)
-      end
-      local cmd_args = opts.args and opts.args ~= "" and opts.args or nil
-      terminal.focus_toggle({}, cmd_args)
-    end, {
-      nargs = "*",
-      desc = "Smart focus/toggle Claude Code terminal (switches to terminal if not focused, hides if focused)",
-    })
+      vim.api.nvim_create_user_command("ClaudeCodeFocus", function(opts)
+        local current_mode = vim.fn.mode()
+        if current_mode == "v" or current_mode == "V" or current_mode == "\22" then
+          vim.api.nvim_feedkeys(vim.api.nvim_replace_termcodes("<Esc>", true, false, true), "n", false)
+        end
+        local cmd_args = opts.args and opts.args ~= "" and opts.args or nil
+        terminal.focus_toggle({}, cmd_args)
+      end, {
+        nargs = "*",
+        desc = "Smart focus/toggle Claude Code terminal (switches to terminal if not focused, hides if focused)",
+      })
 
-    vim.api.nvim_create_user_command("ClaudeCodeOpen", function(opts)
-      local cmd_args = opts.args and opts.args ~= "" and opts.args or nil
-      terminal.open({}, cmd_args)
-    end, {
-      nargs = "*",
-      desc = "Open the Claude Code terminal window with optional arguments",
-    })
+      vim.api.nvim_create_user_command("ClaudeCodeOpen", function(opts)
+        local cmd_args = opts.args and opts.args ~= "" and opts.args or nil
+        terminal.open({}, cmd_args)
+      end, {
+        nargs = "*",
+        desc = "Open the Claude Code terminal window with optional arguments",
+      })
 
-    vim.api.nvim_create_user_command("ClaudeCodeClose", function()
-      terminal.close()
-    end, {
-      desc = "Close the Claude Code terminal window",
-    })
+      vim.api.nvim_create_user_command("ClaudeCodeClose", function()
+        terminal.close()
+      end, {
+        desc = "Close the Claude Code terminal window",
+      })
+    else
+      logger.error(
+        "init",
+        "Terminal module not found. Terminal commands (ClaudeCode, ClaudeCodeOpen, ClaudeCodeClose) not registered."
+      )
+    end
   else
-    logger.error(
-      "init",
-      "Terminal module not found. Terminal commands (ClaudeCode, ClaudeCodeOpen, ClaudeCodeClose) not registered."
-    )
+    logger.debug("init", "Terminal functionality is disabled - terminal commands not registered")
   end
 
   -- Diff management commands

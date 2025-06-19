@@ -33,6 +33,14 @@ M.defaults = {
     { name = "Claude Haiku 3.5 (Latest)", value = "haiku" },
   },
   terminal = nil, -- Will be lazy-loaded to avoid circular dependency
+  terminal = {
+    enabled = true, -- Enable/disable terminal functionality
+    split_side = "right",
+    split_width_percentage = 0.30,
+    provider = "auto",
+    show_native_term_exit_tip = true,
+    auto_close = true,
+  },
 }
 
 ---Validates the provided configuration table.
@@ -171,6 +179,28 @@ function M.validate(config)
     assert(type(model.name) == "string" and model.name ~= "", "models[" .. i .. "].name must be a non-empty string")
     assert(type(model.value) == "string" and model.value ~= "", "models[" .. i .. "].value must be a non-empty string")
   end
+
+  assert(type(config.terminal) == "table", "terminal must be a table")
+  assert(type(config.terminal.enabled) == "boolean", "terminal.enabled must be a boolean")
+  assert(
+    config.terminal.split_side == "left" or config.terminal.split_side == "right",
+    "terminal.split_side must be 'left' or 'right'"
+  )
+  assert(
+    type(config.terminal.split_width_percentage) == "number"
+      and config.terminal.split_width_percentage > 0
+      and config.terminal.split_width_percentage < 1,
+    "terminal.split_width_percentage must be a number between 0 and 1"
+  )
+  assert(
+    config.terminal.provider == "auto" or config.terminal.provider == "snacks" or config.terminal.provider == "native",
+    "terminal.provider must be 'auto', 'snacks', or 'native'"
+  )
+  assert(
+    type(config.terminal.show_native_term_exit_tip) == "boolean",
+    "terminal.show_native_term_exit_tip must be a boolean"
+  )
+  assert(type(config.terminal.auto_close) == "boolean", "terminal.auto_close must be a boolean")
 
   return true
 end
