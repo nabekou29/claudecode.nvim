@@ -216,7 +216,12 @@ function M.close_client(client, code, reason)
     local close_frame = frame.create_close_frame(code, reason)
     client.tcp_handle:write(close_frame, function()
       client.state = "closed"
-      client.tcp_handle:close()
+      local ok, res = pcall(function()
+        client.tcp_handle:close()
+      end)
+      if not ok then
+        logger.error("client", "Error closing TCP handle for client " .. client.id .. ": " .. res)
+      end
     end)
   else
     client.state = "closed"
