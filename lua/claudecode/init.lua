@@ -342,6 +342,9 @@ function M.setup(opts)
     if type(terminal_module.setup) == "function" then
       -- terminal_opts might be nil, which the setup function should handle gracefully.
       terminal_module.setup(opts.terminal, M.state.config.terminal_cmd, M.state.config.env)
+    end
+  end
+
   -- Setup terminal module: always try to call setup to pass terminal_cmd,
   -- even if terminal_opts (for split_side etc.) are not provided.
   local terminal_setup_ok, terminal_module = pcall(require, "claudecode.terminal")
@@ -350,6 +353,8 @@ function M.setup(opts)
     if type(terminal_module.setup) == "function" then
       -- terminal_opts might be nil, which the setup function should handle gracefully.
       terminal_module.setup(terminal_opts, M.state.config.terminal_cmd)
+    end
+  end
   -- Setup terminal module if enabled
   if M.state.config.terminal.enabled then
     local terminal_setup_ok, terminal_module = pcall(require, "claudecode.terminal")
